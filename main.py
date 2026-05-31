@@ -4,9 +4,13 @@ from pypdf import PdfReader
 from cagrag import cag
 from qdrantrag import rag
 from vectorless import vlrag
+import multirag
+import mmrrag
 from cagrag.cag import Document as CagDoc
 from qdrantrag.rag import Document as RagDoc
 from vectorless.vlrag import Document as VlDoc
+from multirag import Document as MultiDoc
+from mmrrag import Document as MmrDoc
 import aiohttp
 import os
 import shutil
@@ -17,6 +21,8 @@ app = FastAPI()
 app.include_router(cag.router)
 app.include_router(rag.router)
 app.include_router(vlrag.router)
+app.include_router(multirag.router)
+app.include_router(mmrrag.router)
 
 API_KEY = "naanthaandaleo"
 
@@ -84,6 +90,8 @@ async def startup():
     await cag.init()
     await rag.init()
     await vlrag.init()
+    await multirag.init()
+    await mmrrag.init()
 
 
 @app.on_event("shutdown")
@@ -112,6 +120,8 @@ async def ingest(file: UploadFile = File(...)):
     await cag.add(CagDoc(text=content, metadata={"source": file.filename}))
     await rag.add(RagDoc(text=content, metadata={"source": file.filename}))
     await vlrag.add(VlDoc(text=content, metadata={"source": file.filename}))
+    await multirag.add(MultiDoc(text=content))
+    await mmrrag.add(MmrDoc(text=content))
 
     return {"status": "success"}
 
@@ -145,6 +155,10 @@ async def adaptive_query(q: Query, x_api_key: str = Header(default=None)):
             result = await vlrag.query(q)
         elif any(word in message_lower for word in ["define", "why"]):
             result = await rag.query(q)
+        elif any(word in message_lower for word in ["different", "expand"]):
+            result = await multirag.query(q)
+        elif any(word in message_lower for word in ["diverse", "variety"]):
+            result = await mmrrag.query(q)
         else:
             result = await cag.query(q)
     except Exception:
