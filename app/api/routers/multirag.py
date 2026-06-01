@@ -3,7 +3,6 @@ import numpy as np
 import nltk
 from nltk.corpus import wordnet
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 from concurrent.futures import ThreadPoolExecutor
 
@@ -11,11 +10,7 @@ nltk.download('wordnet', quiet=True)
 nltk.download('averaged_perceptron_tagger', quiet=True)
 nltk.download('punkt', quiet=True)
 
-class Query(BaseModel):
-    message: str
-
-class Document(BaseModel):
-    text: str
+from app.models.schemas import Query, Document
 
 router = APIRouter(prefix="/multirag", tags=["MultiRAG"])
 embedder = SentenceTransformer("BAAI/bge-base-en-v1.5")

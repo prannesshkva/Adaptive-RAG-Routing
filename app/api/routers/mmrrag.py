@@ -1,15 +1,10 @@
 import faiss, re, asyncio
 import numpy as np
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 from concurrent.futures import ThreadPoolExecutor
 
-class Query(BaseModel):
-    message: str
-
-class Document(BaseModel):
-    text: str
+from app.models.schemas import Query, Document
 
 router = APIRouter(prefix="/mmrrag", tags=["MMRRAG"])
 embedder = SentenceTransformer("BAAI/bge-base-en-v1.5")
