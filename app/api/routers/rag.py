@@ -1,17 +1,17 @@
 from fastapi import APIRouter, HTTPException
-from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance, PointStruct
 import re, asyncio
 from concurrent.futures import ThreadPoolExecutor
 from typing import List
 
-router = APIRouter(prefix="/rag", tags=["RAG"])
-
 from app.models.schemas import Query, Document
+from app.core.embeddings import get_embedder
+
+router = APIRouter(prefix="/rag", tags=["Dense RAG"])
 
 client = QdrantClient(":memory:")
-embedder = SentenceTransformer("BAAI/bge-base-en-v1.5")
+embedder = get_embedder()
 collection_name = "REX AI"
 executor = ThreadPoolExecutor(max_workers=4)
 
@@ -47,8 +47,7 @@ async def embed_texts(texts: List[str]):
 
 async def ensure_collection():
     if not client.collection_exists(collection_name):
-        test_vec = await embed_texts(["test"])
-        dim = len(test_vec[0])
+        dim = embedder.dim
         client.create_collection(
             collection_name=collection_name,
             vectors_config=VectorParams(size=dim, distance=Distance.COSINE)

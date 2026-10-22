@@ -1,13 +1,13 @@
 import faiss, re, asyncio
 import numpy as np
 from fastapi import APIRouter, HTTPException
-from sentence_transformers import SentenceTransformer
 from concurrent.futures import ThreadPoolExecutor
 
 from app.models.schemas import Query, Document
+from app.core.embeddings import get_embedder
 
 router = APIRouter(prefix="/mmrrag", tags=["MMRRAG"])
-embedder = SentenceTransformer("BAAI/bge-base-en-v1.5")
+embedder = get_embedder()
 index = None
 documents_store = []
 embeddings_store = []
@@ -25,7 +25,7 @@ def process(text: str):
     return chunks
 
 async def embed_texts(texts):
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     return await loop.run_in_executor(executor, lambda: embedder.encode(texts, normalize_embeddings=True).astype("float32"))
 
 def mmr(query_embedding, doc_embeddings, top_k=5, lambda_param=0.5):
@@ -51,18 +51,17 @@ def mmr(query_embedding, doc_embeddings, top_k=5, lambda_param=0.5):
 @router.post("/init")
 async def init():
     global index, documents_store, embeddings_store
-    if index is None:
-        dim = len((await embed_texts(["test"]))[0])
-        index = faiss.IndexFlatIP(dim)
-        documents_store = []
-        embeddings_store = []
-    return {"status": "initialized"}
+    dim = embedder.dim
+    index = faiss.IndexFlatIP(dim)
+    documents_store = []
+    embeddings_store = []
+    return {"status": "initialized", "dim": dim}
 
 @router.post("/add")
 async def add(doc: Document):
     global index, documents_store, embeddings_store
     if index is None:
-        raise HTTPException(status_code=400, detail="FAISS not initialized")
+        await init()
     chunks = process(doc.text)
     if not chunks:
         return {"status": "no content"}

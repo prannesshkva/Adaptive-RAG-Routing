@@ -6,12 +6,14 @@ session = None
 
 async def init_session():
     global session
-    session = aiohttp.ClientSession()
+    if session is None or session.closed:
+        session = aiohttp.ClientSession()
 
 async def close_session():
     global session
-    if session:
+    if session and not session.closed:
         await session.close()
+        session = None
 
 def clean_response_strict(text: str) -> str:
     if not text:
@@ -33,16 +35,32 @@ def optimize_query(query: str) -> str:
     optimized = " ".join(words)
     return optimized if optimized else query
 
+def extract_fallback_summary(prompt: str) -> str:
+    """
+    Offline fallback: extracts the best matching sentence from the context
+    if cloud LLM endpoint is unreachable.
+    """
+    ctx_match = re.search(r"Context:\s*(.*?)\s*Q:", prompt, flags=re.DOTALL)
+    if ctx_match:
+        ctx_text = ctx_match.group(1).strip()
+        if ctx_text:
+            sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", ctx_text) if s.strip()]
+            return " ".join(sentences[:2]) if sentences else ctx_text[:200]
+    return "Context retrieved successfully. (Cloud LLM unavailable for final generation)"
+
 async def call_cloud_llm(prompt: str, model: str):
+    global session
+    if session is None or session.closed:
+        session = aiohttp.ClientSession()
+
     try:
         async with session.post(
             CLOUD_URL,
             json={"prompt": prompt, "model": model},
             headers={"x-api-key": API_KEY},
-            timeout=aiohttp.ClientTimeout(total=30)
+            timeout=aiohttp.ClientTimeout(total=5)
         ) as resp:
             data = await resp.json()
             return data.get("response", "")
     except Exception as e:
-        print("CLOUD ERROR:", e)
-        return "Error contacting cloud model"
+        return extract_fallback_summary(prompt)

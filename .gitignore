@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.pt
+*.pkl
+*.log
+.locks/
+.cache/
+uploaded_docs/
+.env
+.venv/
+env/
+venv/
