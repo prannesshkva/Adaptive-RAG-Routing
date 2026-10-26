@@ -1,0 +1,326 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 660" width="100%" height="100%" style="background:#070b12; border-radius:12px; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <!-- Background Grid Pattern -->
+    <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#131b2e" stroke-width="0.75" />
+      <circle cx="30" cy="30" r="1" fill="#1e293b" />
+    </pattern>
+
+    <!-- Gradients -->
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#c084fc" />
+    </linearGradient>
+
+    <linearGradient id="cardGradDark" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#111827" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#0b0f19" stop-opacity="0.95" />
+    </linearGradient>
+
+    <linearGradient id="hubGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+
+    <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#ec4899" />
+    </linearGradient>
+
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#14b8a6" />
+    </linearGradient>
+
+    <linearGradient id="amberGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#ef4444" />
+    </linearGradient>
+
+    <!-- Glow Filters -->
+    <filter id="cyanGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <filter id="purpleGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <filter id="routerGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <style>
+    /* CSS Motion Animations */
+    @keyframes pulseGlow {
+      0%, 100% { filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.4)); }
+      50% { filter: drop-shadow(0 0 16px rgba(129, 140, 248, 0.8)); }
+    }
+
+    @keyframes radarPing {
+      0% { r: 10px; opacity: 0.9; }
+      100% { r: 35px; opacity: 0; }
+    }
+
+    @keyframes beamFlow {
+      0% { stroke-dashoffset: 80; }
+      100% { stroke-dashoffset: 0; }
+    }
+
+    @keyframes activePulse {
+      0%, 100% { opacity: 0.85; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.015); }
+    }
+
+    @keyframes beaconBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .pulse-hub {
+      animation: pulseGlow 4s infinite ease-in-out;
+      transform-origin: center;
+    }
+
+    .ping-circle {
+      animation: radarPing 2.5s infinite cubic-bezier(0, 0.2, 0.8, 1);
+      transform-origin: center;
+    }
+
+    .circuit-beam {
+      stroke-dasharray: 8 12;
+      animation: beamFlow 1.6s infinite linear;
+    }
+
+    .circuit-beam-fast {
+      stroke-dasharray: 6 10;
+      animation: beamFlow 1.1s infinite linear;
+    }
+
+    .active-card {
+      animation: activePulse 3s infinite ease-in-out;
+      transform-origin: center;
+    }
+
+    .live-dot {
+      animation: beaconBlink 1.4s infinite ease-in-out;
+    }
+
+    .tag-text {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+  </style>
+
+  <!-- Background Grid -->
+  <rect width="1000" height="660" fill="#070b12" rx="12" />
+  <rect width="1000" height="660" fill="url(#grid)" rx="12" />
+
+  <!-- Outer Frame Glow Border -->
+  <rect x="1" y="1" width="998" height="658" fill="none" stroke="#1e293b" stroke-width="1.5" rx="12" />
+
+  <!-- ==================== HEADER BAR ==================== -->
+  <g transform="translate(30, 24)">
+    <!-- Tech Badge -->
+    <rect x="0" y="0" width="130" height="24" rx="12" fill="#1e293b" stroke="#334155" stroke-width="1" />
+    <circle cx="12" cy="12" r="4" fill="#10b981" class="live-dot" />
+    <text x="24" y="15" fill="#f8fafc" font-size="10.5" font-weight="700" letter-spacing="0.5">ADAPTIVE RAG v2.0</text>
+
+    <!-- Main Title -->
+    <text x="145" y="17" fill="url(#headerGrad)" font-size="16" font-weight="800" letter-spacing="0.5">DYNAMIC QUERY ORCHESTRATION &amp; ARBITRATION PIPELINE</text>
+
+    <!-- Live Telemetry Status -->
+    <rect x="800" y="0" width="140" height="24" rx="12" fill="#0f172a" stroke="#0ea5e9" stroke-width="1" />
+    <circle cx="814" cy="12" r="3.5" fill="#0ea5e9" class="live-dot" />
+    <text x="825" y="15" fill="#38bdf8" font-size="10" font-weight="600" letter-spacing="0.4">LATENCY: SUB-SECOND</text>
+  </g>
+
+  <!-- Top Divider Line -->
+  <line x1="30" y1="58" x2="970" y2="58" stroke="#1e293b" stroke-width="1" />
+
+  <!-- ==================== STAGE 1: QUERY INGESTION ==================== -->
+  <g transform="translate(30, 75)">
+    <!-- Query Card Background -->
+    <rect x="0" y="0" width="230" height="95" rx="8" fill="url(#cardGradDark)" stroke="#38bdf8" stroke-width="1.5" filter="url(#cyanGlow)" />
+    
+    <!-- Header -->
+    <rect x="10" y="10" width="85" height="18" rx="4" fill="#0369a1" />
+    <text x="16" y="22" fill="#e0f2fe" font-size="9" font-weight="700" letter-spacing="0.5">INCOMING QUERY</text>
+    <text x="195" y="22" fill="#64748b" font-size="9" font-weight="600">INPUT</text>
+
+    <!-- Query Content -->
+    <text x="12" y="46" fill="#f1f5f9" font-size="11.5" font-weight="600">"How does FastAPI implement</text>
+    <text x="12" y="62" fill="#f1f5f9" font-size="11.5" font-weight="600">modern web APIs with python?"</text>
+
+    <!-- Metadata Badges -->
+    <rect x="12" y="74" width="70" height="14" rx="3" fill="#1e293b" />
+    <text x="16" y="84" fill="#94a3b8" font-size="8.5" font-weight="600">WORDS: 9 (≥6)</text>
+
+    <rect x="88" y="74" width="80" height="14" rx="3" fill="#1e293b" />
+    <text x="92" y="84" fill="#38bdf8" font-size="8.5" font-weight="600">TECH COMPLEXITY</text>
+  </g>
+
+  <!-- Flow Circuit: Query to Central Router -->
+  <path d="M 260 122 L 340 122" fill="none" stroke="#1e293b" stroke-width="2.5" />
+  <path d="M 260 122 L 340 122" fill="none" stroke="#38bdf8" stroke-width="2.5" class="circuit-beam-fast" />
+
+  <!-- ==================== STAGE 2: ADAPTIVE ROUTER (THE BRAIN) ==================== -->
+  <g transform="translate(340, 68)" class="pulse-hub">
+    <!-- Outer Glow & Ping Radar -->
+    <circle cx="110" cy="54" r="28" fill="none" stroke="#6366f1" stroke-width="1.5" opacity="0.6" class="ping-circle" />
+
+    <!-- Router Main Container -->
+    <rect x="0" y="0" width="220" height="108" rx="10" fill="url(#hubGrad)" stroke="#818cf8" stroke-width="2" filter="url(#routerGlow)" />
+    
+    <!-- Chip Icon / Badge -->
+    <rect x="12" y="10" width="115" height="18" rx="4" fill="#4338ca" />
+    <text x="18" y="22" fill="#e0e7ff" font-size="9" font-weight="700" letter-spacing="0.5">ADAPTIVE CLASSIFIER</text>
+    <text x="185" y="22" fill="#a5b4fc" font-size="9" font-weight="700">CORE</text>
+
+    <!-- Classifier Logic Nodes -->
+    <text x="14" y="44" fill="#f8fafc" font-size="12" font-weight="700">Semantic Intent &amp; Entropy</text>
+    <text x="14" y="60" fill="#94a3b8" font-size="9.5">1. Lexical Density &amp; Length Analysis</text>
+    <text x="14" y="74" fill="#94a3b8" font-size="9.5">2. Intent Markers &amp; Verifiability Gating</text>
+    <text x="14" y="88" fill="#94a3b8" font-size="9.5">3. Multi-Path Cost-Latency Arbitration</text>
+
+    <!-- Status Pin -->
+    <circle cx="205" cy="95" r="4" fill="#38bdf8" />
+  </g>
+
+  <!-- Dispatch Bus Line (Vertical Trunk) -->
+  <path d="M 560 122 L 600 122" fill="none" stroke="#6366f1" stroke-width="2" />
+  <path d="M 600 122 L 600 520" fill="none" stroke="#1e293b" stroke-width="2.5" />
+  <path d="M 600 122 L 600 520" fill="none" stroke="#818cf8" stroke-width="2.5" class="circuit-beam" />
+
+  <!-- ==================== STAGE 3: 7 SPECIALIZED RAG MODALITIES ==================== -->
+
+  <!-- Branch 1: Hybrid RAG (Dense + BM25 with RRF) [ACTIVE HIGHLIGHT] -->
+  <g transform="translate(630, 75)" class="active-card">
+    <path d="M -30 25 L 0 25" fill="none" stroke="#06b6d4" stroke-width="2" class="circuit-beam-fast" />
+    <rect x="0" y="0" width="340" height="52" rx="6" fill="#0f172a" stroke="#06b6d4" stroke-width="1.8" filter="url(#cyanGlow)" />
+    <!-- Active Indicator -->
+    <circle cx="16" cy="26" r="5" fill="#06b6d4" class="live-dot" />
+    <text x="28" y="22" fill="#38bdf8" font-size="11.5" font-weight="700">Hybrid RAG (RRF Fusion)</text>
+    <text x="28" y="38" fill="#94a3b8" font-size="9">FAISS Dense + BM25 Sparse | k=60 Fusion</text>
+    <!-- Trigger Tag -->
+    <rect x="250" y="16" width="78" height="18" rx="4" fill="#083344" stroke="#06b6d4" stroke-width="0.8" />
+    <text x="256" y="28" fill="#67e8f9" class="tag-text">ACTIVE MATCH</text>
+  </g>
+
+  <!-- Branch 2: Corrective RAG (CRAG) -->
+  <g transform="translate(630, 137)">
+    <path d="M -30 25 L 0 25" fill="none" stroke="#a855f7" stroke-width="1.5" />
+    <rect x="0" y="0" width="340" height="52" rx="6" fill="#0f172a" stroke="#a855f7" stroke-width="1" />
+    <circle cx="16" cy="26" r="4" fill="#a855f7" />
+    <text x="28" y="22" fill="#c084fc" font-size="11.5" font-weight="700">Corrective RAG (CRAG)</text>
+    <text x="28" y="38" fill="#94a3b8" font-size="9">Confidence Gate (Γ ≥ 0.60) | Sentence Noise Stripper</text>
+    <rect x="255" y="16" width="73" height="18" rx="4" fill="#3b0764" />
+    <text x="260" y="28" fill="#d8b4fe" class="tag-text">VERIFICATION</text>
+  </g>
+
+  <!-- Branch 3: Standard Dense Vector RAG -->
+  <g transform="translate(630, 199)">
+    <path d="M -30 25 L 0 25" fill="none" stroke="#3b82f6" stroke-width="1.5" />
+    <rect x="0" y="0" width="340" height="52" rx="6" fill="#0f172a" stroke="#3b82f6" stroke-width="1" />
+    <circle cx="16" cy="26" r="4" fill="#3b82f6" />
+    <text x="28" y="22" fill="#60a5fa" font-size="11.5" font-weight="700">Standard Dense RAG</text>
+    <text x="28" y="38" fill="#94a3b8" font-size="9">Qdrant In-Memory Vector DB | Cosine Distance</text>
+    <rect x="260" y="16" width="68" height="18" rx="4" fill="#172554" />
+    <text x="265" y="28" fill="#93c5fd" class="tag-text">DEFINITIONS</text>
+  </g>
+
+  <!-- Branch 4: Sparse Lexical BM25 (VLRAG) -->
+  <g transform="translate(630, 261)">
+    <path d="M -30 25 L 0 25" fill="none" stroke="#10b981" stroke-width="1.5" />
+    <rect x="0" y="0" width="340" height="52" rx="6" fill="#0f172a" stroke="#10b981" stroke-width="1" />
+    <circle cx="16" cy="26" r="4" fill="#10b981" />
+    <text x="28" y="22" fill="#34d399" font-size="11.5" font-weight="700">Sparse BM25 (VLRAG)</text>
+    <text x="28" y="38" fill="#94a3b8" font-size="9">BM25Okapi Exact Token Match | POS Lemmatization</text>
+    <rect x="255" y="16" width="73" height="18" rx="4" fill="#064e3b" />
+    <text x="260" y="28" fill="#6ee7b7" class="tag-text">CODES &amp; IDS</text>
+  </g>
+
+  <!-- Branch 5: Multi-Query Expansion -->
+  <g transform="translate(630, 323)">
+    <path d="M -30 25 L 0 25" fill="none" stroke="#f59e0b" stroke-width="1.5" />
+    <rect x="0" y="0" width="340" height="52" rx="6" fill="#0f172a" stroke="#f59e0b" stroke-width="1" />
+    <circle cx="16" cy="26" r="4" fill="#f59e0b" />
+    <text x="28" y="22" fill="#fbbf24" font-size="11.5" font-weight="700">Multi-Query Expansion</text>
+    <text x="28" y="38" fill="#94a3b8" font-size="9">Synonym Generation &amp; Multi-Perspective Variant Search</text>
+    <rect x="262" y="16" width="66" height="18" rx="4" fill="#451a03" />
+    <text x="268" y="28" fill="#fcd34d" class="tag-text">EXPANSION</text>
+  </g>
+
+  <!-- Branch 6: MMR Diversity RAG -->
+  <g transform="translate(630, 385)">
+    <path d="M -30 25 L 0 25" fill="none" stroke="#ec4899" stroke-width="1.5" />
+    <rect x="0" y="0" width="340" height="52" rx="6" fill="#0f172a" stroke="#ec4899" stroke-width="1" />
+    <circle cx="16" cy="26" r="4" fill="#ec4899" />
+    <text x="28" y="22" fill="#f472b6" font-size="11.5" font-weight="700">MMR Diversity RAG</text>
+    <text x="28" y="38" fill="#94a3b8" font-size="9">Maximal Marginal Relevance (λ = 0.70) | Top-5</text>
+    <rect x="264" y="16" width="64" height="18" rx="4" fill="#500724" />
+    <text x="270" y="28" fill="#fbcfe8" class="tag-text">DIVERSITY</text>
+  </g>
+
+  <!-- Branch 7: Cache-Augmented Generation (CAG) -->
+  <g transform="translate(630, 447)">
+    <path d="M -30 25 L 0 25" fill="none" stroke="#14b8a6" stroke-width="1.5" />
+    <rect x="0" y="0" width="340" height="52" rx="6" fill="#0f172a" stroke="#14b8a6" stroke-width="1" />
+    <circle cx="16" cy="26" r="4" fill="#14b8a6" />
+    <text x="28" y="22" fill="#2dd4bf" font-size="11.5" font-weight="700">Cache-Augmented (CAG)</text>
+    <text x="28" y="38" fill="#94a3b8" font-size="9">In-Memory LRU + TTL | Sub-Millisecond Return</text>
+    <rect x="265" y="16" width="63" height="18" rx="4" fill="#134e4a" />
+    <text x="272" y="28" fill="#99f6e4" class="tag-text">FAST CACHE</text>
+  </g>
+
+  <!-- Branch 8: Direct LLM Bypass -->
+  <g transform="translate(630, 509)">
+    <path d="M -30 25 L 0 25" fill="none" stroke="#64748b" stroke-width="1.5" />
+    <rect x="0" y="0" width="340" height="42" rx="6" fill="#0b0f19" stroke="#334155" stroke-width="1" stroke-dasharray="4 4" />
+    <circle cx="16" cy="21" r="3.5" fill="#64748b" />
+    <text x="28" y="25" fill="#94a3b8" font-size="10.5" font-weight="600">Direct LLM Parametric Bypass ("aa" Prefix / Chit-Chat)</text>
+    <text x="290" y="25" fill="#64748b" font-size="8.5" font-weight="700">NO RAG</text>
+  </g>
+
+  <!-- ==================== STAGE 4: CONVERGENCE & GROUNDED SYNTHESIS ==================== -->
+  
+  <!-- Return Bus Line from Active Branch to Synthesis -->
+  <path d="M 630 101 L 450 101 L 450 595 L 300 595" fill="none" stroke="#06b6d4" stroke-width="2" class="circuit-beam" />
+
+  <g transform="translate(30, 555)">
+    <!-- Output Card Container -->
+    <rect x="0" y="0" width="550" height="82" rx="8" fill="url(#cardGradDark)" stroke="#10b981" stroke-width="1.5" />
+    
+    <!-- Title / Badge -->
+    <rect x="12" y="10" width="165" height="18" rx="4" fill="#065f46" />
+    <circle cx="22" cy="19" r="3.5" fill="#34d399" class="live-dot" />
+    <text x="32" y="22" fill="#d1fae5" font-size="9" font-weight="700" letter-spacing="0.5">SYNTHESIS &amp; GROUNDING</text>
+    <text x="450" y="22" fill="#6ee7b7" font-size="9" font-weight="700">VERIFIED OUTPUT</text>
+
+    <!-- Response Preview -->
+    <text x="14" y="44" fill="#f8fafc" font-size="11" font-weight="600">Response Payload:</text>
+    <text x="125" y="44" fill="#94a3b8" font-size="10.5">"FastAPI leverages Python type hints with Pydantic schemas..."</text>
+
+    <!-- Audit Badges -->
+    <rect x="14" y="56" width="130" height="16" rx="3" fill="#1e293b" />
+    <text x="20" y="68" fill="#38bdf8" font-size="8.5" font-weight="600">STRATEGY: hybridrag</text>
+
+    <rect x="152" y="56" width="145" height="16" rx="3" fill="#1e293b" />
+    <text x="158" y="68" fill="#34d399" font-size="8.5" font-weight="600">REASON: Complex Technical Query</text>
+
+    <rect x="305" y="56" width="115" height="16" rx="3" fill="#1e293b" />
+    <text x="311" y="68" fill="#cbd5e1" font-size="8.5" font-weight="600">HALLUCINATION: 0.0%</text>
+  </g>
+</svg>
