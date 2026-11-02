@@ -1,41 +1,47 @@
-from fastapi import APIRouter, Header
+from typing import Annotated
+from fastapi import APIRouter, Header, HTTPException, status
 from app.models.schemas import Query
+from app.core.config import API_KEY
 from app.services.llm_service import call_cloud_llm, clean_response_strict, optimize_query
 from app.api.routers import cag, rag, vlrag, multirag, mmrrag, hybridrag, crag
 
-router = APIRouter()
+router = APIRouter(tags=["Adaptive Query"])
+
+# Explicit routing map
+STRATEGY_EXECUTORS = {
+    "hybridrag": hybridrag.query,
+    "crag": crag.query,
+    "vlrag": vlrag.query,
+    "multirag": multirag.query,
+    "mmrrag": mmrrag.query,
+    "rag": rag.query,
+    "cag": cag.query,
+}
+
 
 def classify_routing_strategy(query_str: str, explicit_strategy: str | None = None) -> tuple[str, str]:
-    """
-    Intelligent Adaptive RAG Classifier.
-    Determines the most effective RAG strategy based on query semantics,
-    lexical density, intent markers, and explicit overrides.
-    Returns: (strategy_name, reason)
-    """
     if explicit_strategy:
         strategy_clean = explicit_strategy.lower().strip()
-        if strategy_clean in ["hybrid", "hybridrag"]:
-            return "hybridrag", "Explicitly requested Hybrid RRF strategy."
-        elif strategy_clean in ["crag", "corrective"]:
-            return "crag", "Explicitly requested Corrective RAG strategy."
-        elif strategy_clean in ["vlrag", "sparse", "bm25"]:
-            return "vlrag", "Explicitly requested Sparse BM25 strategy."
-        elif strategy_clean in ["rag", "dense", "vector"]:
-            return "rag", "Explicitly requested Dense Vector strategy."
-        elif strategy_clean in ["multirag", "multi", "expansion"]:
-            return "multirag", "Explicitly requested Multi-Query expansion strategy."
-        elif strategy_clean in ["mmr", "mmrrag", "diversity"]:
-            return "mmrrag", "Explicitly requested MMR Diversity strategy."
-        elif strategy_clean in ["cag", "cache"]:
-            return "cag", "Explicitly requested Cache-Augmented strategy."
+        overrides = {
+            "hybrid": "hybridrag", "hybridrag": "hybridrag",
+            "crag": "crag", "corrective": "crag",
+            "vlrag": "vlrag", "sparse": "vlrag", "bm25": "vlrag",
+            "rag": "rag", "dense": "rag", "vector": "rag",
+            "multirag": "multirag", "multi": "multirag", "expansion": "multirag",
+            "mmr": "mmrrag", "mmrrag": "mmrrag", "diversity": "mmrrag",
+            "cag": "cag", "cache": "cag",
+        }
+        if strategy_clean in overrides:
+            strat = overrides[strategy_clean]
+            return strat, f"Explicitly requested {strat} strategy."
 
     msg_lower = query_str.lower().strip()
     words = msg_lower.split()
 
-    # 1. Corrective RAG (CRAG) -> Verification, confirmation, fact-checking queries
+    # 1. Corrective RAG (CRAG) -> Verification, confirmation, fact-checking
     crag_triggers = ["verify", "is it true", "confirm", "fact check", "accurate", "validate", "check if", "is there proof"]
     if any(trigger in msg_lower for trigger in crag_triggers):
-        return "crag", "Verification or fact-checking intent detected; routed to Corrective RAG with self-reflection."
+        return "crag", "Verification or fact-checking intent detected; routed to Corrective RAG."
 
     # 2. Standard Dense Vector RAG -> Definitions and conceptual inquiries
     dense_triggers = ["define", "why", "what is", "meaning of", "explain"]
@@ -52,28 +58,41 @@ def classify_routing_strategy(query_str: str, explicit_strategy: str | None = No
     if any(trigger in msg_lower for trigger in mmr_triggers):
         return "mmrrag", "Diversity or categorization query detected; routed to Maximal Marginal Relevance (MMR)."
 
-    # 5. Hybrid RAG (Dense + BM25 Fusion) -> Technical, architectural, procedural, or balanced descriptive queries
+    # 5. Hybrid RAG (Dense + BM25 Fusion) -> Technical, procedural, or 6+ words
     hybrid_triggers = ["how does", "how to", "architecture", "mechanism", "steps", "implement", "process", "pipeline", "protocol"]
     if any(trigger in msg_lower for trigger in hybrid_triggers) or len(words) >= 6:
         return "hybridrag", "Complex or technical query combining concepts and terminology; routed to Hybrid RRF."
 
-    # 6. Sparse Lexical BM25 (VLRAG) -> Exact codes, IDs, quoted phrases, or short queries without questions
+    # 6. Sparse Lexical BM25 (VLRAG) -> Exact codes, IDs, quoted phrases, short numeric strings
     has_code_or_id = any('_' in w or (any(c.isdigit() for c in w) and any(c.isalpha() for c in w)) for w in words)
     has_quotes = '"' in query_str or "'" in query_str
     if has_code_or_id or has_quotes or (len(words) <= 3 and any(c.isdigit() for c in query_str)):
         return "vlrag", "Exact code, ID, or alphanumeric string detected; routed to Sparse BM25."
 
-    # 7. Default to CAG (Cache-Augmented Generation)
+    # 7. Default to CAG
     return "cag", "Standard query; routed to Cache-Augmented Generation."
 
 
 @router.post("/adaptive_query")
-async def adaptive_query(q: Query, x_api_key: str = Header(default=None)):
-    original_message = q.message.strip()
-    optimized_query = optimize_query(original_message)
-    q.message = optimized_query
+async def adaptive_query(
+    q: Query,
+    x_api_key: Annotated[str | None, Header()] = None
+):
+    # Optional Security Key Guard: Enforce if provided or configured
+    if API_KEY and x_api_key and x_api_key != API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid X-API-KEY header.",
+        )
 
-    # Direct generation bypass for "aa" prefix
+    original_message = q.message.strip()
+    if not original_message:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Empty query message.",
+        )
+
+    # 1. Direct LLM bypass check (Raw message before mutation)
     if original_message.lower().startswith("aa"):
         clean_msg = original_message[2:].strip()
         if not clean_msg:
@@ -86,24 +105,16 @@ async def adaptive_query(q: Query, x_api_key: str = Header(default=None)):
             "reason": "Direct LLM generation requested via prefix."
         }
 
-    # Classify the optimal RAG route
+    # 2. Routing Decision based on unmutated query
     selected_strategy, reason = classify_routing_strategy(original_message, q.strategy)
 
+    # 3. Optimize query for retrieval
+    q.message = optimize_query(original_message)
+
+    # 4. Dispatch query to selected strategy router
+    executor = STRATEGY_EXECUTORS.get(selected_strategy, cag.query)
     try:
-        if selected_strategy == "hybridrag":
-            result = await hybridrag.query(q)
-        elif selected_strategy == "crag":
-            result = await crag.query(q)
-        elif selected_strategy == "vlrag":
-            result = await vlrag.query(q)
-        elif selected_strategy == "multirag":
-            result = await multirag.query(q)
-        elif selected_strategy == "mmrrag":
-            result = await mmrrag.query(q)
-        elif selected_strategy == "rag":
-            result = await rag.query(q)
-        else:
-            result = await cag.query(q)
+        result = await executor(q)
     except Exception as e:
         return {
             "data": "Error retrieving context",
@@ -119,14 +130,12 @@ async def adaptive_query(q: Query, x_api_key: str = Header(default=None)):
             "reason": reason
         }
 
-    # Handle lists of context strings or dicts
+    # 5. Normalize context payload
     if isinstance(raw_context, list):
-        extracted = []
-        for item in raw_context:
-            if isinstance(item, dict):
-                extracted.append(item.get("text", str(item)))
-            else:
-                extracted.append(str(item))
+        extracted = [
+            item.get("text", str(item)) if isinstance(item, dict) else str(item)
+            for item in raw_context
+        ]
         context_str = "\n".join(extracted)
     else:
         context_str = str(raw_context)
@@ -140,8 +149,8 @@ async def adaptive_query(q: Query, x_api_key: str = Header(default=None)):
             "reason": reason
         }
 
+    # Truncate and attach optional document metadata
     context_str = context_str[:3000]
-
     if q.pdf:
         context_str += f"\n[Document: {q.pdf}]"
 
