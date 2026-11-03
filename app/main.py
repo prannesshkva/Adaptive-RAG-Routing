@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.services.llm_service import init_session, close_session
 from app.api.endpoints import ingest, query
 from app.api.routers import rag, vlrag, cag, multirag, mmrrag, hybridrag, crag
+import uvicorn
 
 @asyncontextmanager
 async def lifespan(app: FastAPI):
@@ -117,5 +118,8 @@ async def list_routes():
             },
         ]
     }
+
+if __name__ == "__main__":
+    uvicorn.run("main:app",host="127.0.0.1",port=8000,reload=True) #you could configure this as per your settings
 
 
