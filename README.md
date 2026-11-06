@@ -24,8 +24,9 @@
 
 ## Overview
 
-**Adaptive-RAG-Routing** is a high-performance orchestration layer engineered to dynamically route natural language queries to optimal retrieval and reasoning pipelines. Rather than applying a single uniform retrieval strategy to every user inquiry, this architecture performs real-time query decomposition, lexical density analysis, and semantic complexity classification to select among specialized RAG modalities:
+**Adaptive-RAG-Routing** is a high-performance orchestration layer engineered to dynamically route natural language queries to optimal retrieval and reasoning pipelines. At its core, the decision engine is driven by **Aurelio AI's Semantic Router (`IndexedRouter`)** backed by `BAAI/bge-base-en-v1.5` embeddings. Rather than applying a single rigid retrieval strategy or incurring high-latency LLM routing calls, it performs sub-100ms vector space semantic intent routing—fused with lexical density analysis and query decomposition—to dynamically select among specialized RAG modalities:
 
+* **Semantic Decision Router**: Aurelio AI vector-space router evaluating query intent manifolds with calibrated confidence scoring.
 * **Hybrid RAG (RRF)**: Fuses dense semantic embeddings (FAISS) and sparse lexical tokens (BM25Okapi) via Reciprocal Rank Fusion ($k = 60$).
 * **Corrective RAG (CRAG)**: Self-reflective retrieval with automated confidence scoring, contextual noise stripping, and hallucination guardrails.
 * **Standard Dense RAG**: Fast cosine-distance vector indexing backed by Qdrant.
@@ -42,6 +43,12 @@
 <p align="center">
   <img src="assets/adaptive_rag_animation.svg" alt="Adaptive RAG Routing Architecture & Dynamic Execution Flow" width="100%" />
 </p>
+
+1. **Query Ingestion**: Natural language queries enter through the unified `/adaptive_query` endpoint.
+2. **Aurelio AI Semantic Routing**: Query embeddings are matched against strategy utterance manifolds using `IndexedRouter` in sub-100ms vector space.
+3. **Calibrated Confidence Gating**: Queries scoring above the similarity threshold (0.35) route to their specialized pipeline; low-confidence outliers gracefully default to Cache-Augmented Generation (CAG).
+4. **Specialized Retrieval**: Executes the matched modality (Dense Qdrant, Sparse BM25Okapi, Hybrid FAISS+BM25 RRF, CRAG verification, or Multi-Query expansion).
+5. **Context Assembly & Generation**: Retained context is synthesized through the parametric LLM engine with anti-hallucination guardrails.
 
 ---
 
@@ -65,10 +72,11 @@
 
 | Modality | Router Module | Mathematical / Algorithmic Core | Primary Triggers & Classification Rule |
 | :--- | :--- | :--- | :--- |
-| **Hybrid RAG (RRF)** | `app/api/routers/hybridrag.py` | Dense vector (FAISS) + Sparse BM25 via Reciprocal Rank Fusion ($k = 60$) | Complex technical queries ($\ge 6$ words), architectural or procedural terms (`"how does"`, `"architecture"`, `"steps"`) |
+| **Semantic Decision Router** | `app/services/semantic_decision_router.py` | Aurelio AI `IndexedRouter` with `BAAI/bge-base-en-v1.5` embeddings | Dynamic intent routing in vector space (sub-100ms inference) |
+| **Hybrid RAG (RRF)** | `app/api/routers/hybridrag.py` | Dense vector (FAISS) + Sparse BM25 via Reciprocal Rank Fusion ($k = 60$) | Complex technical queries (≥ 6 words), architectural or procedural terms (`"how does"`, `"architecture"`, `"steps"`) |
 | **Corrective RAG (CRAG)** | `app/api/routers/crag.py` | Self-reflective dual confidence metric ($\Gamma \ge 0.60$) with sentence noise stripping | Verification and fact-checking queries (`"verify"`, `"is it true"`, `"confirm"`, `"check if"`) |
 | **Standard Dense RAG** | `app/api/routers/rag.py` | Cosine similarity vector search via Qdrant in-memory client | Definitions and direct conceptual inquiries (`"define"`, `"what is"`, `"why"`, `"explain"`) |
-| **Sparse Lexical RAG** | `app/api/routers/vlrag.py` | BM25Okapi token matching with NLTK POS tagging and WordNet lemmatization | Exact codes, IDs, alphanumeric strings (`_` character, mixed digits/letters, quotes, $\le 3$ words) |
+| **Sparse Lexical RAG** | `app/api/routers/vlrag.py` | BM25Okapi token matching with NLTK POS tagging and WordNet lemmatization | Exact codes, IDs, alphanumeric strings (`_` character, mixed digits/letters, quotes, ≤ 3 words) |
 | **Multi-Query RAG** | `app/api/routers/multirag.py` | Synonym generation & multi-perspective query expansion | Broad, comparative, or multi-faceted queries (`"different"`, `"expand"`, `"perspectives"`, `"compare"`) |
 | **MMR Diversity RAG** | `app/api/routers/mmrrag.py` | Maximal Marginal Relevance diversified selection ($\lambda = 0.70$, $K = 5$) | Diversity and taxonomy queries (`"diverse"`, `"variety"`, `"types of"`, `"range of"`) |
 | **Cache-Augmented (CAG)** | `app/api/routers/cag.py` | In-memory LRU cache with TTL + semantic key normalization | Repeated inquiries & cached high-frequency states (Default fallback) |
@@ -100,7 +108,7 @@ Dense vector search excels at broad semantic understanding but misses exact alph
 To unify both retrieval heads without requiring calibrated probability scores, results are merged via **Reciprocal Rank Fusion**:
 
 $$
-\operatorname{RRF\_Score}(d \in \mathcal{D}) = \sum_{m \in \{\text{dense}, \text{sparse}\}} \frac{1}{k + r_m(d)}
+\text{RRF\_Score}(d \in \mathcal{D}) = \sum_{m \in \{\text{dense}, \text{sparse}\}} \frac{1}{k + r_m(d)}
 $$
 
 where:
@@ -114,32 +122,32 @@ where:
 For exact identifier and code retrieval, the corpus is tokenized, stripped of non-informative stopwords, and normalized via WordNet POS-lemmatization. Document relevance is scored via the BM25Okapi formula:
 
 $$
-\operatorname{Score}_{\mathrm{BM25}}(D, Q) = \sum_{t \in Q} \operatorname{IDF}(t) \cdot \frac{f(t, D) \cdot (k_1 + 1)}{f(t, D) + k_1 \cdot \left(1 - b + b \cdot \frac{|D|}{\operatorname{avgdl}}\right)}
+\text{Score}_{\text{BM25}}(D, Q) = \sum_{t \in Q} \text{IDF}(t) \cdot \frac{f(t, D) \cdot (k_1 + 1)}{f(t, D) + k_1 \cdot \left(1 - b + b \cdot \frac{|D|}{\text{avgdl}}\right)}
 $$
 
 where the Inverse Document Frequency (IDF) is calculated as:
 
 $$
-\operatorname{IDF}(t) = \ln \left( \frac{N - n(t) + 0.5}{n(t) + 0.5} + 1 \right)
+\text{IDF}(t) = \ln \left( \frac{N - n(t) + 0.5}{n(t) + 0.5} + 1 \right)
 $$
 
 * $f(t, D)$ is the term frequency of token $t$ in candidate chunk $D$.
-* $|D|$ is the length of document $D$ in words, and $\operatorname{avgdl}$ is the average document length across the corpus.
+* $|D|$ is the length of document $D$ in words, and $\text{avgdl}$ is the average document length across the corpus.
 * $k_1 = 1.5$ regulates term saturation non-linearity.
 * $b = 0.75$ controls document length normalization.
 
 ---
 
 ### 4. Maximal Marginal Relevance (MMR)
-Standard top-$K$ semantic similarity frequently populates the prompt window with near-duplicate passages. **MMR** maximizes information entropy by balancing candidate query relevance with candidate diversity against already-selected context:
+Standard top-K semantic similarity frequently populates the prompt window with near-duplicate passages. **MMR** maximizes information entropy by balancing candidate query relevance with candidate diversity against already-selected context:
 
 $$
-\operatorname{MMR}(Q, \mathcal{D}, \mathcal{S}) \equiv \underset{d_i \in \mathcal{D} \setminus \mathcal{S}}{\operatorname{argmax}} \left[ \lambda \cdot \operatorname{Sim}_1(d_i, Q) - (1 - \lambda) \cdot \max_{d_j \in \mathcal{S}} \operatorname{Sim}_2(d_i, d_j) \right]
+\text{MMR}(Q, \mathcal{D}, \mathcal{S}) \equiv \arg\max_{d_i \in \mathcal{D} \setminus \mathcal{S}} \left[ \lambda \cdot \text{Sim}_1(d_i, Q) - (1 - \lambda) \cdot \max_{d_j \in \mathcal{S}} \text{Sim}_2(d_i, d_j) \right]
 $$
 
 where:
-* $\operatorname{Sim}_1(d_i, Q) = \mathbf{e}_{d_i}^{\top} \mathbf{e}_Q$ is the cosine similarity between candidate document $d_i$ and query $Q$.
-* $\operatorname{Sim}_2(d_i, d_j) = \mathbf{e}_{d_i}^{\top} \mathbf{e}_{d_j}$ measures pairwise semantic similarity between candidate $d_i$ and already selected document $d_j \in \mathcal{S}$.
+* $\text{Sim}_1(d_i, Q) = \mathbf{e}_{d_i}^{\top} \mathbf{e}_Q$ is the cosine similarity between candidate document $d_i$ and query $Q$.
+* $\text{Sim}_2(d_i, d_j) = \mathbf{e}_{d_i}^{\top} \mathbf{e}_{d_j}$ measures pairwise semantic similarity between candidate $d_i$ and already selected document $d_j \in \mathcal{S}$.
 * $\lambda = 0.70$ provides the optimal trade-off (70% query relevance, 30% novelty diversification).
 
 ---
@@ -158,12 +166,16 @@ where $\mathcal{K}(q)$ denotes filtered non-stopword query keywords, and $\mathc
 The evaluation pipeline branches across three deterministic thresholds:
 
 $$
-\operatorname{Action}(\Gamma) = \begin{cases} 
-\text{CORRECT} & \text{if } \Gamma \ge 0.60 \implies \text{Contextual noise stripping (retains top salient sentences)} \\ 
-\text{AMBIGUOUS} & \text{if } 0.40 \le \Gamma \lt 0.60 \implies \text{Query reformulation \& entity-directed re-retrieval} \\ 
-\text{INCORRECT} & \text{if } \Gamma \lt 0.40 \implies \text{Context insufficiency flag (Prevents hallucinated answers)} 
+\text{Action}(\Gamma) = \begin{cases} 
+\text{CORRECT}, & \text{if } \Gamma \ge 0.60 \\ 
+\text{AMBIGUOUS}, & \text{if } 0.40 \le \Gamma < 0.60 \\ 
+\text{INCORRECT}, & \text{if } \Gamma < 0.40 
 \end{cases}
 $$
+
+* **`CORRECT` ($\Gamma \ge 0.60$)**: High confidence; executes contextual noise stripping to retain the most salient sentence units.
+* **`AMBIGUOUS` ($0.40 \le \Gamma < 0.60$)**: Marginal confidence; triggers query reformulation and entity-directed re-retrieval.
+* **`INCORRECT` ($\Gamma < 0.40$)**: Low confidence; flags context insufficiency to eliminate hallucinated responses.
 
 ---
 
@@ -177,7 +189,7 @@ $$
 Under unit-norm constraint, the cosine similarity between query embedding $\mathbf{e}_q$ and document embedding $\mathbf{e}_d$ simplifies to a single matrix dot product:
 
 $$
-\operatorname{Sim}_{\cos}(\mathbf{e}_q, \mathbf{e}_d) = \frac{\mathbf{e}_q \cdot \mathbf{e}_d}{\|\mathbf{e}_q\|_2 \|\mathbf{e}_d\|_2} = \mathbf{e}_q^{\top} \mathbf{e}_d
+\text{Sim}_{\cos}(\mathbf{e}_q, \mathbf{e}_d) = \frac{\mathbf{e}_q \cdot \mathbf{e}_d}{\|\mathbf{e}_q\|_2 \|\mathbf{e}_d\|_2} = \mathbf{e}_q^{\top} \mathbf{e}_d
 $$
 
 This allows FAISS (`IndexFlatIP`) and Qdrant (`Distance.COSINE`) to execute high-throughput inner product scans with zero runtime vector norm divisions.
@@ -209,7 +221,8 @@ Adaptive-RAG-Routing/
 │   ├── models/
 │   │   └── schemas.py               # Pydantic validation schemas (Query, Document)
 │   ├── services/
-│   │   └── llm_service.py           # LLM session lifecycle and fallback handler
+│   │   ├── llm_service.py           # LLM session lifecycle and fallback handler
+│   │   └── semantic_decision_router.py # Aurelio AI IndexedRouter with BGE embeddings
 │   └── main.py                      # FastAPI application entrypoint & router catalog
 ├── tests/
 │   └── test_routing.py              # Comprehensive classification & integration tests
