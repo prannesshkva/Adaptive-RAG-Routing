@@ -73,10 +73,10 @@
 | Modality | Router Module | Mathematical / Algorithmic Core | Primary Triggers & Classification Rule |
 | :--- | :--- | :--- | :--- |
 | **Semantic Decision Router** | `app/services/semantic_decision_router.py` | Aurelio AI `IndexedRouter` with `BAAI/bge-base-en-v1.5` embeddings | Dynamic intent routing in vector space (sub-100ms inference) |
-| **Hybrid RAG (RRF)** | `app/api/routers/hybridrag.py` | Dense vector (FAISS) + Sparse BM25 via Reciprocal Rank Fusion ($k = 60$) | Complex technical queries (≥ 6 words), architectural or procedural terms (`"how does"`, `"architecture"`, `"steps"`) |
+| **Hybrid RAG (RRF)** | `app/api/routers/hybridrag.py` | Dense vector (FAISS) + Sparse BM25 via Reciprocal Rank Fusion ($k = 60$) | Complex technical queries (>= 6 words), architectural or procedural terms (`"how does"`, `"architecture"`, `"steps"`) |
 | **Corrective RAG (CRAG)** | `app/api/routers/crag.py` | Self-reflective dual confidence metric ($\Gamma \ge 0.60$) with sentence noise stripping | Verification and fact-checking queries (`"verify"`, `"is it true"`, `"confirm"`, `"check if"`) |
 | **Standard Dense RAG** | `app/api/routers/rag.py` | Cosine similarity vector search via Qdrant in-memory client | Definitions and direct conceptual inquiries (`"define"`, `"what is"`, `"why"`, `"explain"`) |
-| **Sparse Lexical RAG** | `app/api/routers/vlrag.py` | BM25Okapi token matching with NLTK POS tagging and WordNet lemmatization | Exact codes, IDs, alphanumeric strings (`_` character, mixed digits/letters, quotes, ≤ 3 words) |
+| **Sparse Lexical RAG** | `app/api/routers/vlrag.py` | BM25Okapi token matching with NLTK POS tagging and WordNet lemmatization | Exact codes, IDs, alphanumeric strings (`_` character, mixed digits/letters, quotes, <= 3 words) |
 | **Multi-Query RAG** | `app/api/routers/multirag.py` | Synonym generation & multi-perspective query expansion | Broad, comparative, or multi-faceted queries (`"different"`, `"expand"`, `"perspectives"`, `"compare"`) |
 | **MMR Diversity RAG** | `app/api/routers/mmrrag.py` | Maximal Marginal Relevance diversified selection ($\lambda = 0.70$, $K = 5$) | Diversity and taxonomy queries (`"diverse"`, `"variety"`, `"types of"`, `"range of"`) |
 | **Cache-Augmented (CAG)** | `app/api/routers/cag.py` | In-memory LRU cache with TTL + semantic key normalization | Repeated inquiries & cached high-frequency states (Default fallback) |
@@ -108,7 +108,7 @@ Dense vector search excels at broad semantic understanding but misses exact alph
 To unify both retrieval heads without requiring calibrated probability scores, results are merged via **Reciprocal Rank Fusion**:
 
 $$
-\text{RRF\_Score}(d \in \mathcal{D}) = \sum_{m \in \{\text{dense}, \text{sparse}\}} \frac{1}{k + r_m(d)}
+\text{Score}_{\text{RRF}}(d \in \mathcal{D}) = \sum_{m \in \{\text{dense}, \text{sparse}\}} \frac{1}{k + r_m(d)}
 $$
 
 where:
