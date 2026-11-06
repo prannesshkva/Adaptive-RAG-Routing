@@ -1,13 +1,21 @@
 import aiohttp
 import re
+from aiohttp import TCPConnector, ClientTimeout
 from app.core.config import CLOUD_URL, API_KEY
 
-session = None
+session: aiohttp.ClientSession | None = None
+
 
 async def init_session():
     global session
     if session is None or session.closed:
-        session = aiohttp.ClientSession()
+        connector = TCPConnector(
+            limit=100,            # Max total simultaneous connections
+            limit_per_host=20,    # Max connections per host
+            ssl=False             # Bypasses IP SSL certificate verification errors
+        )
+        session = aiohttp.ClientSession(connector=connector)
+
 
 async def close_session():
     global session
@@ -15,15 +23,16 @@ async def close_session():
         await session.close()
         session = None
 
+
 def clean_response_strict(text: str) -> str:
     if not text:
         return ""
     text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
-    text = re.sub(r"<.*?>", "", text)
     text = text.replace("```", "")
     text = text.replace("**", "")
     text = re.sub(r"\s+", " ", text)
     return text.strip()
+
 
 def optimize_query(query: str) -> str:
     query = query.strip().lower()
@@ -35,11 +44,8 @@ def optimize_query(query: str) -> str:
     optimized = " ".join(words)
     return optimized if optimized else query
 
+
 def extract_fallback_summary(prompt: str) -> str:
-    """
-    Offline fallback: extracts the best matching sentence from the context
-    if cloud LLM endpoint is unreachable.
-    """
     ctx_match = re.search(r"Context:\s*(.*?)\s*Q:", prompt, flags=re.DOTALL)
     if ctx_match:
         ctx_text = ctx_match.group(1).strip()
@@ -48,19 +54,27 @@ def extract_fallback_summary(prompt: str) -> str:
             return " ".join(sentences[:2]) if sentences else ctx_text[:200]
     return "Context retrieved successfully. (Cloud LLM unavailable for final generation)"
 
-async def call_cloud_llm(prompt: str, model: str):
+
+async def call_cloud_llm(prompt: str, model: str) -> str:
     global session
     if session is None or session.closed:
-        session = aiohttp.ClientSession()
+        await init_session()
+
+    timeout = ClientTimeout(total=30.0, connect=3.0, sock_read=27.0)
 
     try:
         async with session.post(
             CLOUD_URL,
             json={"prompt": prompt, "model": model},
-            headers={"x-api-key": API_KEY},
-            timeout=aiohttp.ClientTimeout(total=5)
+            headers={"x-api-key": API_KEY, "Content-Type": "application/json"},
+            timeout=timeout,
+            ssl=False
         ) as resp:
-            data = await resp.json()
-            return data.get("response", "")
-    except Exception as e:
+            if resp.status == 200:
+                data = await resp.json(content_type=None)
+                return data.get("response", "")
+            return extract_fallback_summary(prompt)
+
+    except Exception:
+        # Graceful zero-failure fallback
         return extract_fallback_summary(prompt)

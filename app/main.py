@@ -1,4 +1,4 @@
-from contextlib import asyncontextmanager
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.services.llm_service import init_session, close_session
@@ -6,7 +6,7 @@ from app.api.endpoints import ingest, query
 from app.api.routers import rag, vlrag, cag, multirag, mmrrag, hybridrag, crag
 import uvicorn
 
-@asyncontextmanager
+@asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_session()
 
@@ -15,7 +15,7 @@ async def lifespan(app: FastAPI):
     await vlrag.init()
     await crag.init()
     await cag.init()
-    await mmrag.init()
+    await mmrrag.init()
     await multirag.init()
 
     yield
@@ -23,10 +23,12 @@ async def lifespan(app: FastAPI):
     await close_session()
 
 
-app = FastAPI(title="Adaptive RAG Routing API",
-              description="Production-ready multi-strategy Adaptive RAG system with dynamic query classification, Hybrid RRF, and Corrective RAG.",
-              version="2.0.0",
-              lifespan=lifespan)
+app = FastAPI(
+    title="Adaptive RAG Routing API",
+    description="Production-ready multi-strategy Adaptive RAG system with dynamic query classification, Aurelio AI Semantic Router, Hybrid RRF, and Corrective RAG.",
+    version="2.0.0",
+    lifespan=lifespan
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -53,6 +55,7 @@ async def root():
         "status": "online",
         "service": "Adaptive-RAG-Routing",
         "version": "2.0.0",
+        "decision_engine": "Aurelio AI Semantic Router",
         "endpoints": {
             "adaptive_query": "/adaptive_query",
             "ingest_file": "/ingest",
@@ -67,6 +70,7 @@ async def list_routes():
     Catalog of all production RAG routing strategies available in the system.
     """
     return {
+        "decision_engine": "Aurelio AI Semantic Router",
         "strategies": [
             {
                 "id": "hybridrag",
@@ -120,6 +124,4 @@ async def list_routes():
     }
 
 if __name__ == "__main__":
-    uvicorn.run("main:app",host="127.0.0.1",port=8000,reload=True) #you could configure this as per your settings
-
-
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

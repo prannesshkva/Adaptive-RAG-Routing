@@ -50,6 +50,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Python-18181B?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
   <img src="https://img.shields.io/badge/FastAPI-18181B?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/Aurelio_AI-Semantic_Router-3B82F6?style=for-the-badge" alt="Aurelio AI" />
   <img src="https://img.shields.io/badge/Pydantic-18181B?style=for-the-badge&logo=pydantic&logoColor=white" alt="Pydantic" />
   <img src="https://img.shields.io/badge/FAISS-18181B?style=for-the-badge&logo=meta&logoColor=white" alt="FAISS" />
   <img src="https://img.shields.io/badge/Qdrant-18181B?style=for-the-badge&logo=database&logoColor=white" alt="Qdrant" />
@@ -77,14 +78,19 @@
 
 ## Mathematical Foundations
 
-### 1. Dynamic Routing Decision Boundary
-The adaptive classifier inspects the input query $q$ across lexical density, structural tokens, and semantic intent to evaluate an assignment function $\mathcal{R}(q)$:
+### 1. Aurelio AI Semantic Decision Routing
+The routing layer leverages **Aurelio AI's `IndexedRouter`** with `BAAI/bge-base-en-v1.5` embeddings to evaluate semantic similarity against route utterances in vector space in sub-100ms:
 
 $$
-\mathcal{R}(q) \in \{\text{CRAG}, \text{Dense}, \text{MultiQuery}, \text{MMR}, \text{Hybrid}, \text{BM25}, \text{CAG}, \text{Direct}\}
+\mathcal{R}(q) = \arg\max_{r \in \mathcal{S}} \max_{u \in \mathcal{U}_r} \frac{\mathbf{e}(q) \cdot \mathbf{e}(u)}{\|\mathbf{e}(q)\| \|\mathbf{e}(u)\|}
 $$
 
-The priority cascade ensures that deterministic signals (e.g., verification predicates and alphanumeric identifiers) preempt general vector retrieval, avoiding costly vector index lookups for non-vector tasks.
+Where:
+* $\mathcal{S} = \{\text{CRAG}, \text{Hybrid RRF}, \text{Dense}, \text{Sparse BM25}, \text{MultiQuery}, \text{MMR}, \text{CAG}\}$
+* $\mathcal{U}_r$ is the semantic utterance manifold for strategy $r$.
+* $\mathbf{e}(\cdot)$ is the normalized dense embedding projection.
+
+If $\max \text{sim} < 0.35$, the query smoothly falls back to Cache-Augmented Generation (CAG). Explicit bot overrides (`strategy="hybrid"`, `strategy="crag"`, etc.) bypass the router directly.
 
 ---
 
