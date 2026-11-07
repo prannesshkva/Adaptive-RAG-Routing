@@ -1,10 +1,45 @@
 import aiohttp
 import re
+from typing import Optional, Any
 from aiohttp import TCPConnector, ClientTimeout
-from app.core.config import CLOUD_URL, API_KEY
+from app.core.config import (
+    CLOUD_URL,
+    API_KEY,
+    GROQ_API_KEY,
+    GROQ_BASE_URL,
+    GROQ_DEFAULT_MODEL
+)
 from app.core.telemetry import traceable
 
+try:
+    from openai import AsyncOpenAI
+    from langsmith.wrappers import wrap_openai
+    _OPENAI_AVAILABLE = True
+except ImportError:
+    _OPENAI_AVAILABLE = False
+    wrap_openai = lambda client: client
+
 session: aiohttp.ClientSession | None = None
+groq_client: Optional[Any] = None
+
+
+def get_groq_client():
+    """
+    Returns an AsyncOpenAI client wrapped with LangSmith wrap_openai telemetry,
+    pointing to Groq API with openai/gpt-oss-120b.
+    """
+    global groq_client
+    if groq_client is None and _OPENAI_AVAILABLE and GROQ_API_KEY:
+        try:
+            raw_client = AsyncOpenAI(
+                api_key=GROQ_API_KEY,
+                base_url=GROQ_BASE_URL
+            )
+            # Wrap client to capture token usage, inputs, outputs, and latency in LangSmith
+            groq_client = wrap_openai(raw_client)
+        except Exception:
+            groq_client = None
+    return groq_client
 
 
 async def init_session():
@@ -19,10 +54,16 @@ async def init_session():
 
 
 async def close_session():
-    global session
+    global session, groq_client
     if session and not session.closed:
         await session.close()
         session = None
+    if groq_client and hasattr(groq_client, "close"):
+        try:
+            await groq_client.close()
+        except Exception:
+            pass
+        groq_client = None
 
 
 def clean_response_strict(text: str) -> str:
@@ -58,6 +99,30 @@ def extract_fallback_summary(prompt: str) -> str:
 
 @traceable(name="cloud_llm_inference", run_type="llm", tags=["llm", "generation"])
 async def call_cloud_llm(prompt: str, model: str) -> str:
+    # 1. Primary: High-speed Groq inference with wrap_openai telemetry if GROQ_API_KEY is configured
+    client = get_groq_client()
+    if client is not None:
+        try:
+            target_model = model if model and model not in ["default", "llama-3-8b"] else GROQ_DEFAULT_MODEL
+            completion = await client.chat.completions.create(
+                model=target_model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a factual, concise RAG assistant. Answer strictly based on the provided context."
+                    },
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.2,
+                max_tokens=1024
+            )
+            if completion.choices and completion.choices[0].message.content:
+                return completion.choices[0].message.content
+        except Exception:
+            # Graceful fallback to secondary cloud endpoint if Groq experiences rate limits or network issues
+            pass
+
+    # 2. Secondary: Resilient aiohttp cloud session fallback
     global session
     if session is None or session.closed:
         await init_session()

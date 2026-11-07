@@ -32,3 +32,15 @@ os.environ["LANGCHAIN_PROJECT"] = LANGSMITH_PROJECT
 if LANGSMITH_API_KEY:
     os.environ["LANGSMITH_API_KEY"] = LANGSMITH_API_KEY
     os.environ["LANGCHAIN_API_KEY"] = LANGSMITH_API_KEY
+
+# =====================================================================
+# Groq & OpenAI-compatible LLM Configuration
+# =====================================================================
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_BASE_URL = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
+GROQ_DEFAULT_MODEL = os.getenv("GROQ_DEFAULT_MODEL", "openai/gpt-oss-120b")
+
+if GROQ_API_KEY:
+    os.environ["GROQ_API_KEY"] = GROQ_API_KEY
+os.environ["GROQ_BASE_URL"] = GROQ_BASE_URL
+os.environ["GROQ_DEFAULT_MODEL"] = GROQ_DEFAULT_MODEL

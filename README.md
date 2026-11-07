@@ -377,6 +377,21 @@ export LANGCHAIN_API_KEY="lsv2_pt_..."
 * **Zero-Overhead Local Fallback**: When `LANGSMITH_API_KEY` is not supplied, `@traceable` operates in local execution mode without breaking test suites or API calls.
 * **Granular Spans**: Every retrieval pass, vector-space routing decision, and LLM generation emits nested spans with latency profiling and token metrics.
 
+### Groq LLM Engine with `wrap_openai` Telemetry
+For ultra-fast response generation and native token accounting in LangSmith, configure your Groq API credentials:
+
+```bash
+# Groq LLM Provider & Target Model
+export GROQ_API_KEY="gsk_..."
+export GROQ_BASE_URL="https://api.groq.com/openai/v1"
+export GROQ_DEFAULT_MODEL="openai/gpt-oss-120b"
+```
+
+The service leverages LangSmith's official client wrapper (`from langsmith.wrappers import wrap_openai`) over `openai.AsyncOpenAI`:
+* **Native Token Accounting**: Automatically tracks exact prompt tokens, completion tokens, model parameters, and generation latency in LangSmith.
+* **Model Endpoint**: Connects to `openai/gpt-oss-120b` via `https://api.groq.com/openai/v1`.
+* **Resilient Fallback**: If `GROQ_API_KEY` is not configured or encounters network limits, the service smoothly falls back to the secondary cloud generation engine.
+
 ---
 
 ## Testing

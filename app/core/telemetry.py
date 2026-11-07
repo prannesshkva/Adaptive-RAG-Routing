@@ -34,6 +34,12 @@ def get_telemetry_status() -> Dict[str, Any]:
         "endpoint": os.getenv("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com"),
         "project": os.getenv("LANGSMITH_PROJECT", "adaptive-rag-routing"),
         "has_api_key": bool(os.getenv("LANGSMITH_API_KEY") or os.getenv("LANGCHAIN_API_KEY")),
+        "llm_engine": {
+            "model": os.getenv("GROQ_DEFAULT_MODEL", "openai/gpt-oss-120b"),
+            "groq_endpoint": os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
+            "groq_configured": bool(os.getenv("GROQ_API_KEY")),
+            "wrap_openai_telemetry": True
+        }
     }
 
 
