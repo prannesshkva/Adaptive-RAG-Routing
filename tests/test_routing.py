@@ -85,6 +85,40 @@ async def test_routers_end_to_end():
     print("\nAll end-to-end integration tests passed successfully!")
 
 
+def test_langsmith_telemetry():
+    print("\n--- Testing LangSmith Telemetry & Traceable Decorators ---")
+    from app.core.telemetry import get_telemetry_status, traceable
+    from app.core import config
+
+    # 1. Verify OS environment variables populated
+    assert os.environ.get("LANGSMITH_TRACING") in ["true", "false"]
+    assert os.environ.get("LANGCHAIN_TRACING_V2") in ["true", "false"]
+    assert os.environ.get("LANGSMITH_ENDPOINT") == "https://api.smith.langchain.com"
+    assert os.environ.get("LANGCHAIN_ENDPOINT") == "https://api.smith.langchain.com"
+    assert os.environ.get("LANGSMITH_PROJECT") == "adaptive-rag-routing"
+    assert os.environ.get("LANGCHAIN_PROJECT") == "adaptive-rag-routing"
+    print("[PASS] LangSmith OS environment variables correctly configured.")
+
+    # 2. Verify telemetry status object
+    status = get_telemetry_status()
+    assert status["provider"] == "LangSmith"
+    assert status["library_installed"] is True
+    assert status["endpoint"] == "https://api.smith.langchain.com"
+    assert status["project"] == "adaptive-rag-routing"
+    print(f"[PASS] Telemetry status verified: {status}")
+
+    # 3. Verify @traceable decorator execution
+    @traceable(name="test_trace_unit", run_type="chain")
+    def sample_traceable_fn(val: int) -> int:
+        return val * 10
+
+    res = sample_traceable_fn(5)
+    assert res == 50
+    print("[PASS] Traceable function execution succeeded.")
+    print("All LangSmith telemetry tests passed successfully!")
+
+
 if __name__ == "__main__":
+    test_langsmith_telemetry()
     test_classification()
     asyncio.run(test_routers_end_to_end())

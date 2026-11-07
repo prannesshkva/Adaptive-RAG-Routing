@@ -16,6 +16,7 @@
   <a href="#system-architecture">Architecture</a> •
   <a href="#mathematical-foundations">Mathematical Foundations</a> •
   <a href="#key-routing-modalities">Routing Modalities</a> •
+  <a href="#observability--langsmith-telemetry">Telemetry</a> •
   <a href="#getting-started">Getting Started</a> •
   <a href="#api-reference">API Reference</a>
 </p>
@@ -58,6 +59,7 @@
   <img src="https://img.shields.io/badge/Python-18181B?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
   <img src="https://img.shields.io/badge/FastAPI-18181B?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" />
   <img src="https://img.shields.io/badge/Aurelio_AI-Semantic_Router-3B82F6?style=for-the-badge" alt="Aurelio AI" />
+  <img src="https://img.shields.io/badge/LangSmith-Tracing_&_Telemetry-FF6F00?style=for-the-badge&logo=langchain&logoColor=white" alt="LangSmith" />
   <img src="https://img.shields.io/badge/Pydantic-18181B?style=for-the-badge&logo=pydantic&logoColor=white" alt="Pydantic" />
   <img src="https://img.shields.io/badge/FAISS-18181B?style=for-the-badge&logo=meta&logoColor=white" alt="FAISS" />
   <img src="https://img.shields.io/badge/Qdrant-18181B?style=for-the-badge&logo=database&logoColor=white" alt="Qdrant" />
@@ -216,8 +218,9 @@ Adaptive-RAG-Routing/
 │   │       ├── mmrrag.py            # Maximal Marginal Relevance (Diversity RAG, λ=0.7)
 │   │       └── cag.py               # Cache-Augmented Generation (CAG)
 │   ├── core/
-│   │   ├── config.py                # Configuration and environment settings
-│   │   └── embeddings.py            # Normalized text embeddings with resilient fallback
+│   │   ├── config.py                # Configuration and LangSmith environment settings
+│   │   ├── embeddings.py            # Normalized text embeddings with resilient fallback
+│   │   └── telemetry.py             # LangSmith distributed tracing & @traceable hooks
 │   ├── models/
 │   │   └── schemas.py               # Pydantic validation schemas (Query, Document)
 │   ├── services/
@@ -321,9 +324,64 @@ curl -X POST "http://localhost:8000/adaptive_query" \
 
 ---
 
+### 4. Telemetry & Observability Inspection
+
+Retrieve live LangSmith tracing metrics, project configuration, and connection status:
+```bash
+curl -X GET "http://localhost:8000/telemetry"
+```
+
+Response payload:
+```json
+{
+  "provider": "LangSmith",
+  "library_installed": true,
+  "tracing_enabled": true,
+  "endpoint": "https://api.smith.langchain.com",
+  "project": "adaptive-rag-routing",
+  "has_api_key": true
+}
+```
+
+---
+
+## Observability & LangSmith Telemetry
+
+The routing architecture embeds native **LangSmith `@traceable`** instrumentation across the entire execution tree:
+
+```text
+adaptive_query_pipeline (Chain Span)
+├── classify_routing_strategy (Chain Span)
+│   └── aurelio_semantic_routing (Chain Span)
+├── [specialized_rag_retrieval] (Retriever Span)
+└── cloud_llm_inference (LLM Span)
+```
+
+### Environment Configuration
+Configure LangSmith tracing in your `.env` or system environment:
+
+```bash
+# Enable LangSmith Distributed Tracing
+export LANGSMITH_TRACING=true
+export LANGSMITH_ENDPOINT="https://api.smith.langchain.com"
+export LANGSMITH_PROJECT="adaptive-rag-routing"
+export LANGSMITH_API_KEY="lsv2_pt_..."
+
+# Legacy LangChain environment compatibility (also supported automatically)
+export LANGCHAIN_TRACING_V2=true
+export LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
+export LANGCHAIN_PROJECT="adaptive-rag-routing"
+export LANGCHAIN_API_KEY="lsv2_pt_..."
+```
+
+* **Zero-Overhead Local Fallback**: When `LANGSMITH_API_KEY` is not supplied, `@traceable` operates in local execution mode without breaking test suites or API calls.
+* **Granular Spans**: Every retrieval pass, vector-space routing decision, and LLM generation emits nested spans with latency profiling and token metrics.
+
+---
+
 ## Testing
 
-Execute the comprehensive test suite to verify routing classification, FAISS/BM25 indexing, and CRAG threshold gating:
+Execute the comprehensive test suite to verify routing classification, FAISS/BM25 indexing, LangSmith telemetry hooks, and CRAG threshold gating:
 
 ```bash
 python tests/test_routing.py
@@ -331,12 +389,19 @@ python tests/test_routing.py
 
 Expected output:
 ```text
---- Testing Adaptive Routing Classification ---
-[PASS] 'verify if quantum encryption is unbreakable' -> Expected: crag, Got: crag
-[PASS] 'ERR_404_NOT_FOUND' -> Expected: vlrag, Got: vlrag
-[PASS] 'how does the transformer attention mechanism work' -> Expected: hybridrag, Got: hybridrag
-[PASS] 'define entropy' -> Expected: rag, Got: rag
-All classification tests passed successfully!
+--- Testing LangSmith Telemetry & Traceable Decorators ---
+[PASS] LangSmith OS environment variables correctly configured.
+[PASS] Telemetry status verified: {'provider': 'LangSmith', 'library_installed': True, 'tracing_enabled': True, 'endpoint': 'https://api.smith.langchain.com', 'project': 'adaptive-rag-routing', 'has_api_key': False}
+[PASS] Traceable function execution succeeded.
+All LangSmith telemetry tests passed successfully!
+
+--- Testing Aurelio AI Adaptive Routing Classification ---
+[PASS] 'verify if quantum encryption has mathematical proo...' -> Expected: crag, Got: crag (conf: 0.644)
+[PASS] 'is it true that light speed is constant...' -> Expected: crag, Got: crag (conf: 0.59)
+[PASS] 'ERR_404_NOT_FOUND...' -> Expected: vlrag, Got: vlrag (conf: 0.99)
+[PASS] 'how does the transformer attention mechanism work ...' -> Expected: hybridrag, Got: hybridrag (conf: 0.741)
+[PASS] 'what is the definition of entropy...' -> Expected: rag, Got: rag (conf: 0.795)
+All Aurelio AI classification tests passed successfully!
 
 --- Testing Document Ingestion & Routing End-to-End ---
 [PASS] CRAG correctly detected out-of-domain query and prevented hallucination!

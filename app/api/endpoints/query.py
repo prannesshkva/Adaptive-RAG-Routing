@@ -2,6 +2,7 @@ from fastapi import APIRouter, Header
 from app.models.schemas import Query
 from app.services.llm_service import call_cloud_llm, clean_response_strict, optimize_query
 from app.services.semantic_decision_router import get_semantic_router
+from app.core.telemetry import traceable, get_telemetry_status
 from app.api.routers import cag, rag, vlrag, multirag, mmrrag, hybridrag, crag
 
 router = APIRouter()
@@ -28,6 +29,7 @@ def fallback_heuristic_routing(query_str: str) -> tuple[str, str, float]:
     return "cag", "Standard query; routed to Cache-Augmented Generation.", 0.70
 
 
+@traceable(name="classify_routing_strategy", run_type="chain", tags=["routing", "classifier"])
 def classify_routing_strategy(query_str: str, explicit_strategy: str | None = None) -> tuple[str, str, float]:
     """
     Aurelio AI Semantic Decision Router with explicit override and resilient fallback.
@@ -67,6 +69,7 @@ def classify_routing_strategy(query_str: str, explicit_strategy: str | None = No
 
 
 @router.post("/adaptive_query")
+@traceable(name="adaptive_query_pipeline", run_type="chain", tags=["pipeline", "adaptive-rag"])
 async def adaptive_query(q: Query, x_api_key: str = Header(default=None)):
     original_message = q.message.strip()
     optimized_query = optimize_query(original_message)
@@ -172,6 +175,7 @@ If missing, say: Insufficient data.
 
     if q.explain:
         response_payload["context_snippets"] = raw_context
+        response_payload["telemetry"] = get_telemetry_status()
         if "confidence" in result:
             response_payload["retrieval_confidence"] = result["confidence"]
 

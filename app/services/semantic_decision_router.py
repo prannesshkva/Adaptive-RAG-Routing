@@ -2,6 +2,7 @@ import asyncio
 import re
 from typing import Dict, Any, Tuple
 from concurrent.futures import ThreadPoolExecutor
+from app.core.telemetry import traceable
 
 _ROUTER_INSTANCE = None
 
@@ -71,6 +72,7 @@ class AurelioSemanticRouter:
 
             self._router = IndexedRouter(encoder=encoder, routes=routes, top_k=5)
 
+    @traceable(name="aurelio_semantic_routing", run_type="chain", tags=["aurelio-ai", "semantic-router"])
     def route_sync(self, query: str) -> Dict[str, Any]:
         """
         Evaluates the query through Aurelio AI's IndexedRouter.

@@ -2,6 +2,7 @@ import aiohttp
 import re
 from aiohttp import TCPConnector, ClientTimeout
 from app.core.config import CLOUD_URL, API_KEY
+from app.core.telemetry import traceable
 
 session: aiohttp.ClientSession | None = None
 
@@ -55,6 +56,7 @@ def extract_fallback_summary(prompt: str) -> str:
     return "Context retrieved successfully. (Cloud LLM unavailable for final generation)"
 
 
+@traceable(name="cloud_llm_inference", run_type="llm", tags=["llm", "generation"])
 async def call_cloud_llm(prompt: str, model: str) -> str:
     global session
     if session is None or session.closed:

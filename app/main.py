@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.services.llm_service import init_session, close_session
+from app.core.telemetry import get_telemetry_status
 from app.api.endpoints import ingest, query
 from app.api.routers import rag, vlrag, cag, multirag, mmrrag, hybridrag, crag
 import uvicorn
@@ -56,13 +57,22 @@ async def root():
         "service": "Adaptive-RAG-Routing",
         "version": "2.0.0",
         "decision_engine": "Aurelio AI Semantic Router",
+        "telemetry": get_telemetry_status(),
         "endpoints": {
             "adaptive_query": "/adaptive_query",
             "ingest_file": "/ingest",
             "ingest_text": "/ingest/text",
             "routes_metadata": "/routes",
+            "telemetry": "/telemetry",
         },
     }
+
+@app.get("/telemetry", tags=["Observability"])
+async def telemetry_info():
+    """
+    Returns real-time LangSmith telemetry status, endpoints, and tracing configuration.
+    """
+    return get_telemetry_status()
 
 @app.get("/routes", tags=["Routing Catalog"])
 async def list_routes():
